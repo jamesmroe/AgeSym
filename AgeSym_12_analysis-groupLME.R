@@ -18,7 +18,7 @@ sapply(tmp.packages, require, character.only = T)
 rm(list=ls(pattern="tmp*"))
 
 
-#---data (restricted) - AIBL data is open 
+#---data
 long=read.csv(file.path(datadir,"Statfiles/labelbase_AIBLFULLclean.tsv"),stringsAsFactors = F, header=T, sep=" ")
 
 

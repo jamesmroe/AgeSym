@@ -5,11 +5,11 @@
 #######################################################################
 
 echo "SOURCING FREESURFER"
-export FREESURFER_HOME=/cluster/projects/p23/tools/mri/freesurfer/freesurfer.6.0.0
+export FREESURFER_HOME=${1}
 source $FREESURFER_HOME/SetUpFreeSurfer.sh
-export SUBJECTS_DIR=${3}
+export SUBJECTS_DIR=${2}
 
-sub=$1
+sub=${3}
 subfolder_recon=$SUBJECTS_DIR/$sub
 file=thickness
 template=40tvs8ref_sym_20
