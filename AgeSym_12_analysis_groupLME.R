@@ -18,7 +18,8 @@ sapply(tmp.packages, require, character.only = T)
 rm(list=ls(pattern="tmp*"))
 
 
-#---data
+#---data (restricted) - AIBL data is open
+#data is available at https://aibl.csiro.au/research/support/ pending application approval and compliance with the data usage agreement
 long=read.csv(file.path(datadir,"Statfiles/labelbase_AIBLFULLclean.tsv"),stringsAsFactors = F, header=T, sep=" ")
 
 

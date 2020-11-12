@@ -3,7 +3,9 @@
 ###########################################################
 
 args <- commandArgs(TRUE)
-outdir <- as.character(args[1])
+cohort <- as.character(args[1])
+base <- "/Users/jamesroe/Dropbox/OpenScienceFramework/AgeSym"
+resdir <- file.path(base,"results/reproduceClustering",cohort)
 
 
 # open libraries
@@ -14,7 +16,7 @@ lapply(packages, require, character.only = T)
 
 # load trajectories within signficant clusters
 #............................................#
-fit_val = t(read.csv(file.path(outdir,"fitFitfsav5.csv"),stringsAsFactors = F, sep = ",", header = F))
+fit_val = t(read.csv(file.path(resdir,"fitFitfsav5.csv"),stringsAsFactors = F, sep = ",", header = F))
 end = dim(fit_val)[2]
 mat.dist.fit = matrix(rep(0,end*end), nrow=end)
 
@@ -30,7 +32,7 @@ for(k in 1:end) {
 }
 
 save("mat.dist.fit", "fit_val",
-     file = file.path(outdir, "DS_summary.Rda"))
-# 
-# quit()
+     file = file.path(resdir, "DS_summary.Rda"))
+write.table(mat.dist.fit,file.path(resdir, "distancemat.csv"),quote=F,row.names = F, col.names = F, sep=" ")
+quit()
 

@@ -8,7 +8,7 @@
 addpath(genpath([getenv('FREESURFER_HOME') filesep 'matlab']));
 
 clear all
-wdir = 'path/to/publishedMaps';
+wdir='/Users/jamesroe/Dropbox/OpenScienceFramework/AgeSym/publishedMaps';
 cref = 'LCBC'
 clabs={'CamCan','BaseII','Betula','DLBS'}
 cd(wdir)
@@ -82,8 +82,8 @@ mean(overlaps(4,:))]
 
 
 %%
-%permute significance of overlap
-volume = [wdir filesep 'Fig3C-mainResult_fsaverage5-clusteredTrajectories-LCBC.mgh'];
+%permute significance of overlap with LCBC results
+volume = [wdir filesep 'Fig3C-fsaverage5-clusteredTrajectories-LCBC.mgh'];
 [vol, M, mr_parms, volsz] = load_mgh(volume);
 lab=find(vol~=0);
 v=vol(lab());

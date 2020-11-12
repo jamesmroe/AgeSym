@@ -59,3 +59,23 @@ echo "> smoothing data with FWHM ${sm}"
 done
 
 
+#make new cortex label excluding corpus callosum
+for hemi in lh; do
+	if [ ! -e "$SUBJECTS_DIR/$template/label/${hemi}.CORTEX.label" ]; then
+		echo "> making new ${hemi}.cortex.label"
+		mv $SUBJECTS_DIR/$template/label/${hemi}.cortex.label $SUBJECTS_DIR/$template/label/${hemi}.CORTEX.label
+		
+		mri_annotation2label \
+		--annotation aparc.DKTatlas40 \
+		--subject $template \
+		--hemi ${hemi} \
+		--surf inflated \
+		--sd $SUBJECTS_DIR \
+		--outdir $SUBJECTS_DIR/$template/label/aparc.DKTatlas40/${hemi}
+
+		mri_mergelabels \
+		-d $SUBJECTS_DIR/$template/label/aparc.DKTatlas40/${hemi} \
+		-o $SUBJECTS_DIR/$template/label/${hemi}.cortex.label
+		
+	fi
+done

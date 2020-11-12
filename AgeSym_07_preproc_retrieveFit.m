@@ -1,11 +1,14 @@
-function AgeSym_07_retrieveFit(outdir)
+function AgeSym_07_preproc_retrieveFit(cohort)
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % Purpose: retrieve AgexVertex csv file for signficant 
     %          asymmetry trajectories and hemi effects        
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-    labelname=[outdir filesep 'vtxfsav5.csv'];
+    base='/Users/jamesroe/Dropbox/OpenScienceFramework/AgeSym';
+    cohort='CamCan'
+    resdir=[base filesep 'results/reproduceClustering/' cohort];
+    labelname=[resdir filesep 'vtxfsav5.csv'];
     
     addpath(genpath([getenv('FREESURFER_HOME') filesep 'matlab']));
 
@@ -15,7 +18,7 @@ function AgeSym_07_retrieveFit(outdir)
     lab = str2double(vtx{1}) + 1;
 
 
-    cd(outdir)
+    cd(resdir)
     
     %fit
     filename = 'fitFitfsav5.csv';
@@ -44,5 +47,6 @@ function AgeSym_07_retrieveFit(outdir)
         disp(filename)
         csvwrite(filename,D);
     end
-
+    quit()
 end
+

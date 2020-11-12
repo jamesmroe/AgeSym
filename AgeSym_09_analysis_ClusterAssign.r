@@ -3,7 +3,9 @@
 ###################################
 
 args <- commandArgs(TRUE)
-outdir <- as.character(args[1])
+cohort <- as.character(args[1])
+base <- "/Users/jamesroe/Dropbox/OpenScienceFramework/AgeSym"
+resdir <- file.path(base,"results/reproduceClustering",cohort)
 
 
 # load libraries
@@ -14,12 +16,14 @@ sapply(packages, require, character.only = T)
 
 # load data
 # ........#
-vtx <- readLines(file.path(outdir,"nvtxfsav5.csv")) #clustering constrained within significant vertices on fsaverage5
-load(file = file.path(outdir, "Opt.Rda")) #100 obs age model
-load(file = file.path(outdir, "DS_summary.Rda")) #dissimilarity matrix
-hemieffect = t(read.csv(file.path(outdir, "mapHCoef.fsav5.csv"), header = F)) #hemisphere effect on fsaverage5
+vtx <- readLines(file.path(resdir,"nvtxfsav5.csv")) #clustering constrained within significant vertices on fsaverage5
+load(file = file.path(resdir, "Opt.Rda")) #100 obs age model
+load(file = file.path(resdir, "DS_summary.Rda")) #dissimilarity matrix
+hemieffect = t(read.csv(file.path(resdir, "mapHCoef.fsav5.csv"), header = F)) #hemisphere effect on fsaverage5
 age <- Opt$Age
 if (!dim(mat.dist.fit)[2] == vtx) { print("matrix does not match with n of vertices"); quit() }
+plotdir=file.path(resdir,"Results")
+if (!dir.exists(plotdir)) dir.create(plotdir)
 
 
 # compute silhouettes #
@@ -44,7 +48,7 @@ sols = data.frame("cl"=c(2:max(cl.sil)),
 
 
 #silhouette coefficients
-ggplot(sols) +
+ps=ggplot(sols) +
   geom_vline(xintercept = 3, linetype=2,col="dark grey") +
   geom_point(aes(x=cl,y=dist),size=2,col="#00886e") +
   geom_line(aes(x=cl,y=dist),size=1,col="#00886e") +
@@ -53,21 +57,24 @@ ggplot(sols) +
   theme_classic() +
   labs(y="Silhouette coefficient",
        x="N clusters") +
-  ggtitle("LCBC") +
-  theme(text = element_text(size=12,family="Nimbus Sans Narrow"),
+  theme(text = element_text(size=12),
         axis.title.x = element_text(vjust=1),
         plot.title = element_text(hjust=0.5))
+ggsave(filename=file.path(plotdir,"p.silhouette.png"),plot=ps,width=5,height=5, units="cm")
 
 
 
 ## plot cluster solutions ##
 # .........................#
 LM.dist = 3 #3 cluster solution
-saveord=0
+saveord=1
 col.cl.main = c('lightblue1','orange1','gold1')
 col.cl.mean = c('lightblue4','orange4','gold4')
 ymin = min(fit_val[,])- 0.01
 ymax = max(fit_val[,])+ 0.01
+#plot on same axes as LCBC
+ymin=-0.63688
+ymax=0.511661
 
 
 for (jj in 1:length(LM.dist)) {
@@ -76,7 +83,17 @@ for (jj in 1:length(LM.dist)) {
   print(paste(ncl,"cluster solution"))
   cluster = pam(mat.dist.fit, k=ncl, diss=T)
   cl.ord = cluster$clustering
-
+  
+  
+  #graphcs parameters
+  plotfile <- file.path(plotdir, paste0('p.fit',ncl,'.hemi.png'))
+  print(plotfile)
+  if (file.exists(plotfile)) {file.remove(plotfile) }
+  png(plotfile, width = 300*ncl, height = 500)
+  layout(matrix(1:ncl,1,ncl))
+  par(mar=c(5, 6, 3, 2) + 0.1, cex.lab = 3, cex.axis = 2, cex.main = 2.5, font.main = 1, bg='white')
+  
+  
   for (cl in 1:ncl) {
   
     #vertex plot
@@ -95,13 +112,18 @@ for (jj in 1:length(LM.dist)) {
     #symmetry line
     lines(age, rep(0,length(age)), 
           type = "l", lty = 2, lwd = 1, col="black")
-  
-  }
     
+    
+  }
+  dev.off()
+  
+  
   # write out cluster affiliations for surface plotting
-  # if (saveord == 1) {
-    # write(cl.ord, file = file.path(plotdir, paste('order_clusters', toString(ncl),'.txt', sep = "")), ncolumns = 1)
-  # }
+  # note that colors may be ordered differently than in paper
+  # because the order in which clusters are identified by algorithm will differ between cohorts
+  if (saveord == 1) {
+    write(cl.ord, file = file.path(plotdir, paste('s.order_clusters.fit', toString(ncl),'.txt', sep = "")), ncolumns = 1)
+  }
 }
 
 
@@ -136,7 +158,7 @@ curves[[7]] = Opt$Age
 
 #plot means and SD's
 res = data.frame(res1,res2,res3) %>% mutate(zer=0)
-ggplot(res) +
+pvar=ggplot(res) +
   geom_line(aes(x = age, y = meancurve2), col = col.cl.main[2], size =2,alpha=0.4) +
   geom_line(aes(x = age, y = meancurve1), col = col.cl.main[1], size = 2) +
   geom_line(aes(x = age, y = meancurve3), col = col.cl.main[3], size = 2) +
@@ -149,3 +171,4 @@ ggplot(res) +
   theme_classic() +
   theme(text = element_text(size=16),
         plot.title = element_text(hjust=0.5))
+ggsave(filename=file.path(plotdir,"p.fit3hemi.png"),plot=pvar,width=8,height=13,units = "cm")

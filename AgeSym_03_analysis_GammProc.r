@@ -6,44 +6,43 @@
 
 # Script inputs
 #.............#
-args = commandArgs(TRUE)
-i = as.double(args[1])            
-subset.size = as.double(args[2])  #N vertices to compute in subset
-outdir = as.character(args[3])    #output directory
-database = as.character(args[4])  #database (ordered same as LabelxSub matrix)
-nvtx = as.double(args[5])         #N vertices in lh.cortex.label
-knots = as.double(args[6])        #N knots used for GAMM fitting
-print(paste(i,subset.size,outdir,database,nvtx,knots))
+i=1
+base="/Users/jamesroe/Dropbox/OpenScienceFramework/AgeSym/vtxGamm"
+subset.size = 3                              #N vertices to compute in subset
+outdir = base                                
+database = file.path(base,"simdat.csv")      #simulated data for 3 vertices
+nvtx = 155865		                             #N vertices in lh.cortex.labels
+knots = 6		                                 #N knots used for GAMM fitting
+print(paste(subset.size,outdir,database,nvtx,knots))
 
 
 # Load packages
 #.............#
-packages = c("dplyr", "stringr", "numDeriv","gamm4","magrittr")
+packages = c("dplyr", "stringr", "numDeriv","gamm4","magrittr","ggplot2")
 # sapply(packages, install.packages, character.only = T)
 sapply(packages, require, character.only = T)
 
 
-# Load LabelXSub mat
+# Load VertexXSub mat
 #..................#
-split.dir = file.path(outdir, "split.data")
-vtxmat = read.csv(file.path(split.dir,(paste0("label_matrix",str_pad(toString(i),3,pad = "0"),".csv"))), header =F) %>%
-            t() %>% as.data.frame()
+vtxmat = read.csv(file.path(base, "simvtx.csv"), header = F) %>%
+  t() %>% as.data.frame()
 
 
 # Load database (ordered same as LabelXSub mat)
 #.............................................#
 # required variables:ID, Age, Hemisphere, Sex, Scanner
-db = read.csv("database.csv", sep = "\t", header = T, stringsAsFactors = F) %>%
+db = read.csv(database, sep = "\t", header = T, stringsAsFactors = F) %>%
   mutate(scanner_demean = ifelse(Site_Name == "ousAvanto", -0.5, 0.5),
          sex_demean=Sex-mean(Sex),
          scanner_demean = (scanner_demean-mean(scanner_demean)) /sd(scanner_demean)) %>%
   select(fsid_base,Age,hemi,sex_demean,scanner_demean)
-  
+
 
 
 Yorig = as.matrix(vtxmat)
 N = ceiling(nvtx/subset.size)
-print(it)
+print(N)
 if (i == N) {
   end = dim(Yorig)[2]
 } else {
@@ -67,10 +66,11 @@ pdat = rbind(Opt$fake.frame,
              Opt$fake.frame)
 pdat$hemi[1:100] = 0 #prediction data
 
-filename=file.path(outdir,"Opt.Rda")
-if (!file.exists(filename)) {
-  save(Opt,file =filename)
-}
+
+# filename=file.path(outdir,"Opt.Rda")
+# if (!file.exists(filename)) {
+#   save(Opt,file =filename)
+# }
 
 
 
@@ -84,10 +84,11 @@ for (j in 1:end) {
     ogamm.trajectories = list()
     RR = list()
     pb = txtProgressBar(min=1, max=end, style=3)
+    ph = list()
   }
   setTxtProgressBar(pb,j)
   
-
+  
   #select vertex
   Y = data.frame((Yorig)[,j])
   names(Y) = "Y"
@@ -102,7 +103,7 @@ for (j in 1:end) {
   
   
   #check worked - zero-centered hemispheric age trajectories
-  #plot(g,shade = T,  pages = 1, scale = 0, seWithMean = T)
+  #plot.gam(g,shade = T,  pages = 1, scale = 0, seWithMean = T)
   
   
   #simulate from posterior - Xp matrix
@@ -132,20 +133,57 @@ for (j in 1:end) {
   #SE of the difference using variance-covariance matrix of estimated model coefficients
   dif = X %*% coef(g)
   se = sqrt(rowSums((X %*% vcov(g, unconditional =T)) * X))
+  comp = data.frame("OptAge" = Opt$Age, dif, se)
   
   
   #ordered factor approach to get test statistics for GAMM interaction
   dat = mutate(dat,
                ohemi = ifelse(dat$hemi == 1, "left", "right"),
                ohemi = factor(ohemi, levels = c("left","right"),ordered = T))
-
-    
+  
+  
   #estimate smooth for set reflevel and a smoothed difference between ref and other levels
   ogamm.trajectories[[j]] = gamm4(Y ~ as.factor(hemi) + s(Age) + s(Age, by = ohemi, k = knots) + sex_demean + scanner_demean, 
                                   data = dat, random = ~ (1 |fsid_base))
   ogamm.sum = summary(ogamm.trajectories[[j]]$gam)
   
-    
+  
+  # #retrieve data used by plotgam
+  plotData <- list()
+  trace(mgcv:::plot.gam, at = list(c(27, 1)),
+        quote({
+          message("assigning into globalenv()'s plotData...")
+          plotData <<- pd
+        }))
+  
+  
+  mgcv::plot.gam(gamm.trajectories[[j]]$gam, seWithMean = TRUE, pages = 1)
+  plotdf=data.frame(Age=plotData[[1]]$x,
+                    Lfit=plotData[[2]]$fit, #L
+                    Rfit=plotData[[1]]$fit, #R
+                    xl=plotData[[1]]$xlim,
+                    Lse=plotData[[2]]$se,
+                    Rse=plotData[[1]]$se
+  )
+  
+  
+  ph[[j]] = ggplot(plotdf) +
+    geom_line(aes(Age,Lfit),col=" blue",alpha=0.7,size=1) +
+    geom_line(aes(Age,Rfit),col="gold2",size=1) +
+    # geom_line(aes(Age,Rfit-Lfit),col="black",size=1) +
+    # geom_line(aes(Age,Lfit-Rfit),col="black",size=1) +
+    geom_ribbon(aes(Age,ymin=Lfit-Lse,ymax = Lfit+Lse), alpha = 0.2,fill="blue") +
+    geom_ribbon(aes(Age,ymin=Rfit-Rse,ymax = Rfit+Rse), alpha = 0.3,fill="gold2") +
+    geom_line(data=comp,aes(Opt$Age,dif),col="#008571",size=1) +
+    geom_ribbon(data=comp,aes(x=Opt$Age,ymin = dif-se, ymax = dif+se), alpha = 0.2,fill="#008571") +
+    theme_classic() +
+    theme(text=element_text(size=18)) +
+    geom_text(y=-0.1, x=40, label = "s(LH-Age)", col="blue") +
+    geom_text(y=-0.1-0.025, x=40, label = "s(RH-Age)", col="gold3") +
+    geom_text(y=-0.1-0.05, x=40, label = "s(LH-Age)-s(RH-Age)", col="#008571") +
+    ylab(NULL)
+  
+  
   #get stats
   RR$edf = RR$edf %>% cbind(., ogamm.sum$edf[2]) #edf
   RR$Fval = RR$Fval %>% cbind(., ogamm.sum$s.table[[2,3]]) #Fstat
@@ -159,17 +197,18 @@ for (j in 1:end) {
   RR$fit_valR = RR$fit_valR %>% cbind(.,
                                       predict.gam(gamm.trajectories[[j]]$gam, newdata = pdat[1:100,])) #R
   RR$fit_valdiff = RR$fit_valdiff %>% cbind(., 
-                                              dif) #zero-centered L-R difference
+                                            dif) #zero-centered L-R difference
   RR$se = RR$se %>% cbind(., se)
-
   
-  #get main effect of Hemisphere
+  
+  #get main effect of Hemisphere 
   RR$hT = RR$hT %>% cbind(., gamm.sum$p.t[[2]])
   RR$hCoef = RR$hCoef %>% cbind(., gamm.sum$p.coeff[[2]])
   RR$hP = RR$hP %>% cbind(., gamm.sum$p.pv[[2]])
   RR$hPlog = RR$hPlog %>% cbind(., -log10(gamm.sum$p.pv[[2]]))
-
+  
 }
+ph[[3]]
 
 # save(RR, file = file.path(split.dir, paste0("gamm.results.",str_pad(toString(i),3,pad = "0"),".Rda")))
 # quit()              
