@@ -9,7 +9,7 @@ Paper status: accepted
 #------------
 Vertex-wise GAMM analysis example
 
-1. AgeSym_03_analysis_GammProc.r
+1. scripts/AgeSym_03_analysis_GammProc.r
 
 
 #------------
@@ -26,4 +26,4 @@ Reproduce clustering results in all cohorts
 #------------
 Quantify overlap
 
-1. AgeSym_11_analysis_cohortSimiilarity.m
+1. scripts/AgeSym_11_analysis_cohortSimiilarity.m
